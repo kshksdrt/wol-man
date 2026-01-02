@@ -12,9 +12,15 @@ use std::net::UdpSocket;
 use std::thread;
 use std::time::Duration;
 
+// Network configuration
 const SSID: &str = "";
 const PASS: &str = "";
+
+// Telegram communication configuration
 const TELEGRAM_TOKEN: &str = "";
+const AUTHORIZED_USERS: [i64; 1] = [];
+
+// Wake-on-LAN configuration
 const TARGET_MAC: [u8; 6] = [];
 
 #[derive(Debug, Deserialize)]
@@ -98,8 +104,15 @@ fn main() -> Result<()> {
                         for update in updates.result {
                             offset = update.update_id + 1;
                             if let Some(msg) = update.message {
+                                if !AUTHORIZED_USERS.contains(&msg.chat.id) {
+                                    info!("Unauthorized access attempt from ID: {}", msg.chat.id);
+                                    continue;
+                                }
                                 if let Some(text) = msg.text {
                                     info!("Received message: {}", text);
+                                    if text.trim() == "/health" {
+                                        send_telegram_message(msg.chat.id, "Ready!");
+                                    }
                                     if text.trim() == "/wake" {
                                         send_wol_packet();
                                         send_telegram_message(msg.chat.id, "Success!");
